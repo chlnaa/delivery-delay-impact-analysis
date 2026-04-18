@@ -106,14 +106,13 @@ python -m etl.simulation.generate_event_logs
 
 **4. 가설 검증 SQL 실행**
 
-DBeaver 등 SQL 클라이언트에서 `sql/queries/` 내 파일을 열어 실행하거나 아래의 명령어로 확인할 수 있습니다:
+DBeaver 등 SQL 클라이언트에서 `sql/queries/` 내 파일을 열어 실행하거나  
+`.env` 설정값을 입력해 아래 명령어로 확인할 수 있습니다:
 
 ```bash
-psql -h localhost -p 1234 -U admin -d ecommerce \
+psql -h localhost -p 5432 -U your_user -d your_db \
   -f sql/queries/h2_at_risk_comparison.sql
 ```
-
----
 
 ## 분석 설계 원칙
 
