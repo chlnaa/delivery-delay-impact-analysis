@@ -1,6 +1,7 @@
 # 배송 지연이 고객 이탈과 매출 손실에 미치는 영향 분석
 
-> 이커머스 배송 데이터를 SQL·Python으로 검증하고 Metabase로 KPI를 모니터링하는 엔드투엔드 데이터 분석 프로젝트
+> 배송 지연이 고객 이탈과 매출 손실로 이어지는지를 데이터로 정량화한 프로젝트.  
+> SQL·Python으로 가설을 검증하고 Metabase로 KPI를 모니터링하는 엔드투엔드 파이프라인을 구축했다.
 
 **데이터**: Olist Brazilian E-Commerce (Kaggle, 2016–2018) 약 10만 주문  
 **이벤트 로그**: 재구매 행동 시뮬레이션 320,759건 생성 (order_placed / order_delivered / review_submitted / repurchase)
@@ -9,8 +10,12 @@
 
 ## 목표
 
-배송 지연이 고객 이탈 및 매출 손실로 이어지는지 가설 기반으로 정량화하고  
-실무 수준의 ETL 파이프라인과 모니터링 대시보드를 구축한다.
+이커머스 운영에서 배송 지연이 발생할 때 어떤 비즈니스 손실이 생기는지를  
+데이터로 정량화하고, 운영 리소스의 우선순위 결정에 활용할 수 있는 인사이트를 도출한다.
+
+- 배송 지연 → 고객 이탈 위험 상승 경로를 가설 기반으로 검증
+- 이탈 위험 고객의 잠재 매출 손실 규모 추정
+- KPI 모니터링 대시보드로 지속적인 운영 관찰 가능하도록 구성
 
 ---
 
@@ -25,6 +30,19 @@
 
 **핵심 발견**: 지연 주문의 저평점 비율은 정시 배송의 **6.6배** (60.61% vs 9.14%)
 
+**비즈니스 시사점**: 배송 지연 감소와 고객 커뮤니케이션 개선이  
+이탈률과 잠재 매출 손실을 줄이는 핵심 레버다.  
+운영 리소스가 한정된 상황에서 지연 발생 초기(1~3일)부터  
+개입하는 것이 효과적임을 데이터로 확인했다.
+
+---
+
+## 분석 설계 원칙
+
+- **지연 판정**: `EXTRACT(DAY FROM (delivered_at - estimated_at))::INT > 0` (전 SQL 통일)
+- **리뷰 중복 처리**: `MIN(review_score) + GROUP BY order_id` (전 SQL 통일)
+- **저평점 기준**: 리뷰 점수 1~2점
+
 ---
 
 ## KPI 요약
@@ -37,6 +55,15 @@
 | At-Risk 고객 비율        | 12.62%            |
 | 주문 취소율              | 0.63%             |
 | 지연 주문 내 저평점 비율 | 60.61%            |
+
+---
+
+## 대시보드
+
+![Metabase Dashboard](docs/dashboard.png)
+
+KPI 지표(총 매출, 배송 지연율, at-risk 고객 비율 등)를
+Metabase로 모니터링할 수 있도록 구성했다.
 
 ---
 
@@ -67,13 +94,13 @@
 │   ├── kpi.sql
 │   └── validation.sql
 ├── etl/
-│   ├── pipeline.py                   # ETL 전체 실행
+│   ├── pipeline.py                   # 원천 데이터 추출·변환·적재 자동화
 │   ├── extract.py
 │   ├── transform.py
 │   ├── load.py
 │   ├── db.py
 │   └── simulation/
-│       └── generate_event_logs.py    # 이벤트 로그 시뮬레이션 (320,759건)
+│       └── generate_event_logs.py    # 재구매 추적 불가 문제를 이벤트 로그 시뮬레이션으로 보완
 └── docker-compose.yml                # PostgreSQL + Metabase
 ```
 
@@ -113,12 +140,6 @@ DBeaver 등 SQL 클라이언트에서 `sql/queries/` 내 파일을 열어 실행
 psql -h localhost -p 5432 -U your_user -d your_db \
   -f sql/queries/h2_at_risk_comparison.sql
 ```
-
-## 분석 설계 원칙
-
-- **지연 판정**: `EXTRACT(DAY FROM (delivered_at - estimated_at))::INT > 0` (전 SQL 통일)
-- **리뷰 중복 처리**: `MIN(review_score) + GROUP BY order_id` (전 SQL 통일)
-- **저평점 기준**: 리뷰 점수 1~2점
 
 ---
 
